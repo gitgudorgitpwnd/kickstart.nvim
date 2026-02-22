@@ -354,6 +354,7 @@ require('lazy').setup({
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
       { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
+      { 'nvim-telescope/telescope-file-browser.nvim' }, -- User Change - Add file browser.
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -389,12 +390,18 @@ require('lazy').setup({
         -- pickers = {}
         extensions = {
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
+          -- User change - setup file browser extension for telescope.
+          file_browser = {
+            theme = 'ivy', -- 'ivy' anchors it to the bottom. Change to 'dropdown' if you prefer it centered.
+            hijack_netrw = true, -- Disables Neovim's clunky default file explorer so Telescope takes over
+          },
         },
       }
 
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
+      pcall(require('telescope').load_extension, 'file_browser') -- User Change - file browser for telescope
 
       -- See `:help telescope.builtin`
       local builtin = require 'telescope.builtin'
@@ -409,6 +416,9 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
       vim.keymap.set('n', '<leader>sc', builtin.commands, { desc = '[S]earch [C]ommands' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
+      -- User Change - file browser for telescope keymaps
+      vim.keymap.set('n', '<leader>sb', ':Telescope file_browser<CR>', { desc = '[S]earch [B]rowser (Workspace)' })
+      vim.keymap.set('n', '<leader>sB', ':Telescope file_browser path=%:p:h select_buffer=true<CR>', { desc = '[S]earch [B]rowser (Current Directory)' })
 
       -- This runs on LSP attach per buffer (see main LSP attach function in 'neovim/nvim-lspconfig' config for more info,
       -- it is better explained there). This allows easily switching between pickers if you prefer using something else!
@@ -639,6 +649,9 @@ require('lazy').setup({
         'debugpy', -- Debugger for Python.
         'ruff', -- Linter for Python.
         'pylint', -- Linter for Python.
+        'tailwindcss-language-server', -- TailwindCSS language server.
+        'prettierd', -- TypeScript linter/formatter.
+        'eslint_d', -- TypeScript ultra-fast ESLint.
         -- You can add other tools here that you want Mason to install
       })
 
@@ -711,7 +724,11 @@ require('lazy').setup({
         lua = { 'stylua' },
         -- Conform can also run multiple formatters sequentially
         python = { 'isort', 'black' },
-        --
+        javascript = { 'prettierd', 'prettier', stop_after_first = true },
+        typescript = { 'prettierd', 'prettier', stop_after_first = true },
+        javascriptreact = { 'prettierd', 'prettier', stop_after_first = true },
+        typescriptreact = { 'prettierd', 'prettier', stop_after_first = true },
+
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
       },
@@ -1037,6 +1054,21 @@ require('lazy').setup({
 
   -- =====================================================================
   -- ================== END PYTHON IDE CONFIGURATION =====================
+  -- =====================================================================
+
+  -- =====================================================================
+  -- ==================== START WEB DEV CONFIGURATION ==========================
+  -- =====================================================================
+
+  -- Automatically close and auto-rename HTML/JSX tags
+  {
+    'windwp/nvim-ts-autotag',
+    event = { 'BufReadPre', 'BufNewFile' },
+    config = function() require('nvim-ts-autotag').setup() end,
+  },
+
+  -- =====================================================================
+  -- ==================== END WEB DEV CONFIGURATION ==========================
   -- =====================================================================
 
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
