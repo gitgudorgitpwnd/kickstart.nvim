@@ -496,6 +496,7 @@ require('lazy').setup({
       -- Mason must be loaded before its dependents so we need to set it up here.
       -- NOTE: `opts = {}` is the same as calling `require('mason').setup({})`
       { 'mason-org/mason.nvim', opts = {} },
+      'williamboman/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
 
       -- Useful status updates for LSP.
@@ -503,6 +504,7 @@ require('lazy').setup({
 
       -- Allows extra capabilities provided by blink.cmp
       'saghen/blink.cmp',
+      'b0o/SchemaStore.nvim', -- user change - jsonls yamlls dependency
     },
     config = function()
       -- Brief aside: **What is LSP?**
@@ -624,6 +626,51 @@ require('lazy').setup({
         -- But for many setups, the LSP (`ts_ls`) will work just fine
         --['typescript-language-server'] = {},
         ts_ls = {},
+        --Additional
+        jsonls = {
+          settings = {
+            json = {
+              validate = { enable = true },
+              schemas = require('schemastore').json.schemas(),
+            },
+          },
+        },
+        yamlls = {
+          settings = {
+            yaml = {
+              validate = true,
+              completion = true,
+              hover = true,
+              schemaStore = {
+                -- Disable built-in to avoid conflicts; use SchemaStore plugin instead
+                enable = false,
+                url = '',
+              },
+              schemas = require('schemastore').yaml.schemas(),
+            },
+          },
+        },
+        bashls = {},
+        dockerls = {},
+        taplo = {},
+        marksman = {},
+        tailwindcss = {
+          filetypes = {
+            'html',
+            'css',
+            'scss',
+            'javascript',
+            'javascriptreact',
+            'typescript',
+            'typescriptreact',
+            'tsx',
+          },
+        },
+        sqls = {},
+
+        -- Optional infra
+        terraformls = {},
+        --helm_ls = {},
       }
 
       -- Ensure the servers and tools above are installed
@@ -634,20 +681,28 @@ require('lazy').setup({
       --
       -- You can press `g?` for help in this menu.
       local ensure_installed = vim.tbl_keys(servers or {})
-
+      --[[
       -- User change to address different names in nvim-lspconfig and Mason
       -- Remove 'ts_ls' and 'lua_ls' from the auto-install list because Mason uses a different name
       ensure_installed = vim.tbl_filter(function(name) return name ~= 'ts_ls' end, ensure_installed)
       ensure_installed = vim.tbl_filter(function(name) return name ~= 'lua_ls' end, ensure_installed)
-      ensure_installed = vim.tbl_filter(function(name) return name ~= 'pylsp' end, ensure_installed)
+      ensure_installed = vim.tbl_filter(function(name) return name ~= 'jsonls' end, ensure_installed)
+      ensure_installed = vim.tbl_filter(function(name) return name ~= 'yamlls' end, ensure_installed)
+      ensure_installed = vim.tbl_filter(function(name) return name ~= 'bashls' end, ensure_installed)
+      ensure_installed = vim.tbl_filter(function(name) return name ~= 'dockerls' end, ensure_installed)
+      ensure_installed = vim.tbl_filter(function(name) return name ~= 'tailwindcss' end, ensure_installed)
+      ensure_installed = vim.tbl_filter(function(name) return name ~= 'terraformls' end, ensure_installed)
+      --ensure_installed = vim.tbl_filter(function(name) return name ~= 'helm_ls' end, ensure_installed)
+      ]]
 
+      --[[
       -- User change to install required language servers to be installed by Mason. Use name as per Mason.
       vim.list_extend(ensure_installed, {
         'lua-language-server', -- Lua Language server
         'stylua', -- Used to format Lua code
-        'pyright', -- Used for Python.
+        --'pyright', -- Used for Python.
         'basedpyright', -- Used for Python.
-        'python-lsp-server', -- Used for Python.
+        --'python-lsp-server', -- Used for Python.
         'typescript-language-server', -- Used for TypeScript.
         'black', -- Formatter for python
         'isort', -- Formatter for python
@@ -657,8 +712,26 @@ require('lazy').setup({
         'tailwindcss-language-server', -- TailwindCSS language server.
         'prettierd', -- TypeScript linter/formatter.
         'eslint_d', -- TypeScript ultra-fast ESLint.
+        -- LSP servers
+        'json-lsp', -- jsonls
+        'yaml-language-server', -- yamlls
+        'bash-language-server', -- bashls
+        'dockerfile-language-server', -- dockerls
+        'taplo', -- taplo (TOML)
+        'marksman', -- marksman (Markdown)
+        'tailwindcss-language-server', -- tailwindcss
+        'sqls', -- sqls
+        'terraform-ls', -- terraformls (optional if infra in repo)
+        --'helm-ls', -- helm_ls (optional if Helm charts in repo)
         -- You can add other tools here that you want Mason to install
       })
+      ]]
+
+      -- user change - a programatic way to install language servers through Mason when names are defined for nvim-lspconfig
+      require('mason-lspconfig').setup {
+        ensure_installed = vim.tbl_keys(servers),
+        automatic_installation = true,
+      }
 
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
@@ -733,7 +806,11 @@ require('lazy').setup({
         typescript = { 'prettierd', 'prettier', stop_after_first = true },
         javascriptreact = { 'prettierd', 'prettier', stop_after_first = true },
         typescriptreact = { 'prettierd', 'prettier', stop_after_first = true },
-
+        json = { 'prettierd', 'prettier' },
+        yaml = { 'prettierd', 'prettier' },
+        toml = { 'taplo' },
+        markdown = { 'prettierd', 'prettier' },
+        sh = { 'shfmt' },
         -- You can use 'stop_after_first' to run the first available formatter from the list
         -- javascript = { "prettierd", "prettier", stop_after_first = true },
       },
@@ -904,7 +981,35 @@ require('lazy').setup({
   { -- Highlight, edit, and navigate code
     'nvim-treesitter/nvim-treesitter',
     config = function()
-      local filetypes = { 'bash', 'c', 'diff', 'html', 'lua', 'luadoc', 'markdown', 'markdown_inline', 'query', 'vim', 'vimdoc' }
+      local filetypes = {
+        'bash',
+        'c',
+        'diff',
+        'html',
+        'lua',
+        'luadoc',
+        'markdown',
+        'markdown_inline',
+        'query',
+        'vim',
+        'vimdoc',
+        'luap',
+        'regex',
+        'css',
+        'scss',
+        'javascript',
+        'typescript',
+        'tsx',
+        'python',
+        'json',
+        'json5',
+        'yaml',
+        'toml',
+        'sql',
+        'dockerfile',
+        'hcl',
+        'terraform',
+      }
       require('nvim-treesitter').install(filetypes)
       vim.api.nvim_create_autocmd('FileType', {
         pattern = filetypes,
@@ -939,6 +1044,7 @@ require('lazy').setup({
   require 'kickstart.plugins.nvim-dap',
   require 'kickstart.plugins.neotest',
   require 'kickstart.plugins.vim-slime',
+  --require 'kickstart.plugins.schemastore',
 
   -- TypeScript IDE Plugins
   require 'kickstart.plugins.nvim-ts-autotag',
