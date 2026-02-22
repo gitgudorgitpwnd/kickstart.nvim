@@ -21,5 +21,21 @@ return {
         },
       },
     },
+    window = {
+      mappings = {
+        ['a'] = 'none',
+        ['d'] = 'none',
+        ['r'] = 'none',
+        ['c'] = 'none',
+        ['p'] = 'none',
+        ['m'] = 'none',
+        ['A'] = 'add',
+        ['D'] = 'delete',
+        ['R'] = 'rename',
+        ['C'] = 'copy',
+        ['P'] = 'paste_from_clipboard',
+        ['M'] = 'move',
+      },
+    },
   },
 }

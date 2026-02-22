@@ -84,6 +84,11 @@ I hope you enjoy your Neovim journey,
 P.S. You can delete this when you're done too. It's your config now! :)
 --]]
 
+-- User Change - open netrw to the left with 25% width
+--vim.cmd 'let g:netrw_winsize = 25' -- width %
+--vim.cmd 'let g:netrw_banner = 0' -- hide banner
+--vim.keymap.set('n', ':Vex', ':Vex | wincmd H<CR>')
+
 -- Set <space> as the leader key
 -- See `:help mapleader`
 --  NOTE: Must happen before plugins are loaded (otherwise wrong leader will be used)
@@ -354,7 +359,7 @@ require('lazy').setup({
 
       -- Useful for getting pretty icons, but requires a Nerd Font.
       { 'nvim-tree/nvim-web-devicons', enabled = vim.g.have_nerd_font },
-      { 'nvim-telescope/telescope-file-browser.nvim' }, -- User Change - Add file browser.
+      -- { 'nvim-telescope/telescope-file-browser.nvim' }, -- User Change - Add file browser.
     },
     config = function()
       -- Telescope is a fuzzy finder that comes with a lot of different things that
@@ -391,17 +396,17 @@ require('lazy').setup({
         extensions = {
           ['ui-select'] = { require('telescope.themes').get_dropdown() },
           -- User change - setup file browser extension for telescope.
-          file_browser = {
-            theme = 'ivy', -- 'ivy' anchors it to the bottom. Change to 'dropdown' if you prefer it centered.
-            hijack_netrw = true, -- Disables Neovim's clunky default file explorer so Telescope takes over
-          },
+          -- file_browser = {
+          --  theme = 'ivy', -- 'ivy' anchors it to the bottom. Change to 'dropdown' if you prefer it centered.
+          --  hijack_netrw = true, -- Disables Neovim's clunky default file explorer so Telescope takes over
+          -- },
         },
       }
 
       -- Enable Telescope extensions if they are installed
       pcall(require('telescope').load_extension, 'fzf')
       pcall(require('telescope').load_extension, 'ui-select')
-      pcall(require('telescope').load_extension, 'file_browser') -- User Change - file browser for telescope
+      -- pcall(require('telescope').load_extension, 'file_browser') -- User Change - file browser for telescope
 
       -- See `:help telescope.builtin`
       local builtin = require 'telescope.builtin'
@@ -417,8 +422,8 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sc', builtin.commands, { desc = '[S]earch [C]ommands' })
       vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
       -- User Change - file browser for telescope keymaps
-      vim.keymap.set('n', '<leader>sb', ':Telescope file_browser<CR>', { desc = '[S]earch [B]rowser (Workspace)' })
-      vim.keymap.set('n', '<leader>sB', ':Telescope file_browser path=%:p:h select_buffer=true<CR>', { desc = '[S]earch [B]rowser (Current Directory)' })
+      -- vim.keymap.set('n', '<leader>sb', ':Telescope file_browser<CR>', { desc = '[S]earch [B]rowser (Workspace)' })
+      -- vim.keymap.set('n', '<leader>sB', ':Telescope file_browser path=%:p:h select_buffer=true<CR>', { desc = '[S]earch [B]rowser (Current Directory)' })
 
       -- This runs on LSP attach per buffer (see main LSP attach function in 'neovim/nvim-lspconfig' config for more info,
       -- it is better explained there). This allows easily switching between pickers if you prefer using something else!
@@ -913,163 +918,33 @@ require('lazy').setup({
   -- place them in the correct locations.
 
   -- NOTE: Next step on your Neovim journey: Add/Configure additional plugins for Kickstart
-  --
+
   --  Here are some example plugins that I've included in the Kickstart repository.
   --  Uncomment any of the lines below to enable them (you will need to restart nvim).
-  --
+
   require 'kickstart.plugins.debug',
-  -- require 'kickstart.plugins.indent_line',
-  -- require 'kickstart.plugins.lint',
-  -- require 'kickstart.plugins.autopairs',
+  require 'kickstart.plugins.indent_line',
+  require 'kickstart.plugins.lint',
+  require 'kickstart.plugins.autopairs',
   require 'kickstart.plugins.neo-tree',
   -- require 'kickstart.plugins.gitsigns', -- adds gitsigns recommend keymaps
 
+  -- Plugin bundles - language specific
+  -- require 'kickstart.plugins.python-config-custom', -- user change - add python plugins
+  -- require 'kickstart.plugins.tsjs-config-custom', -- user change - add ts js plugins
+
+  -- Python IDE Plugins
+  require 'kickstart.plugins.venv-selector',
+  require 'kickstart.plugins.nvim-lint',
+  require 'kickstart.plugins.nvim-dap',
+  require 'kickstart.plugins.neotest',
+  require 'kickstart.plugins.vim-slime',
+
+  -- TypeScript IDE Plugins
+  require 'kickstart.plugins.nvim-ts-autotag',
+
   -- NOTE: The import below can automatically add your own plugins, configuration, etc from `lua/custom/plugins/*.lua`
   --    This is the easiest way to modularize your config.
-  --
-  --
-  --
-  --
-
-  -- =====================================================================
-  -- ================= START PYTHON IDE CONFIGURATION ====================
-  -- =====================================================================
-
-  -- 1. VIRTUAL ENVIRONMENT SELECTOR
-  -- Automatically discovers and applies Python virtual environments.
-  -- Keymap: <Space> vs to open the picker.
-  {
-    'linux-cultist/venv-selector.nvim',
-    dependencies = {
-      'neovim/nvim-lspconfig',
-      'nvim-telescope/telescope.nvim',
-      'nvim-lua/plenary.nvim',
-    },
-    -- branch = 'regexp', -- This causes error.
-    event = 'VeryLazy',
-    opts = {},
-    keys = {
-      { '<leader>vs', '<cmd>VenvSelect<cr>', desc = '[V]env [S]elect' },
-    },
-  },
-
-  --[[
-  -- 2. BACKGROUND LINTING
-  -- Runs Ruff in the background to catch logic errors and unused variables.
-  {
-    'mfussenegger/nvim-lint',
-    event = { 'BufReadPre', 'BufNewFile' },
-    config = function()
-      local lint = require 'lint'
-
-      -- Tell nvim-lint to use Ruff for Python files
-      lint.linters_by_ft = {
-        python = {
-          --'ruff',
-          'pylint',
-        },
-      }
-
-      -- Automatically trigger linting when you save or leave insert mode
-      local lint_augroup = vim.api.nvim_create_augroup('lint', { clear = true })
-      vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWritePost', 'InsertLeave' }, {
-        group = lint_augroup,
-        callback = function() lint.try_lint() end,
-      })
-    end,
-  },
-
-  ]]
-  -- 3. VISUAL DEBUGGING
-  -- Hooks into debugpy to provide breakpoints, stepping, and a visual UI.
-  {
-    'mfussenegger/nvim-dap',
-    dependencies = {
-      'rcarriga/nvim-dap-ui',
-      'nvim-neotest/nvim-nio',
-      'mfussenegger/nvim-dap-python',
-    },
-    config = function()
-      local dap = require 'dap'
-      local dapui = require 'dapui'
-
-      require('dap-python').setup 'python'
-
-      dapui.setup()
-
-      -- Automatically open/close the UI when a debug session starts/ends
-      dap.listeners.before.attach.dapui_config = function() dapui.open() end
-      dap.listeners.before.launch.dapui_config = function() dapui.open() end
-      dap.listeners.before.event_terminated.dapui_config = function() dapui.close() end
-      dap.listeners.before.event_exited.dapui_config = function() dapui.close() end
-
-      vim.keymap.set('n', '<F5>', dap.continue, { desc = 'Debug: Start/Continue' })
-      vim.keymap.set('n', '<F10>', dap.step_over, { desc = 'Debug: Step Over' })
-      vim.keymap.set('n', '<F11>', dap.step_into, { desc = 'Debug: Step Into' })
-      vim.keymap.set('n', '<leader>db', dap.toggle_breakpoint, { desc = '[D]ebug [B]reakpoint' })
-    end,
-  },
-
-  -- 4. INTERACTIVE TEST RUNNER
-  -- Visual test runner for pytest/unittest that shows results in the gutter.
-  {
-    'nvim-neotest/neotest',
-    dependencies = {
-      'nvim-neotest/nvim-nio',
-      'nvim-lua/plenary.nvim',
-      'antoinemadec/FixCursorHold.nvim',
-      'nvim-treesitter/nvim-treesitter',
-      'nvim-neotest/neotest-python',
-    },
-    config = function()
-      require('neotest').setup {
-        adapters = {
-          require 'neotest-python' {
-            dap = { justMyCode = false },
-          },
-        },
-      }
-
-      vim.keymap.set('n', '<leader>tr', function() require('neotest').run.run() end, { desc = '[T]est [R]un nearest' })
-      vim.keymap.set('n', '<leader>tf', function() require('neotest').run.run(vim.fn.expand '%') end, { desc = '[T]est [F]ile' })
-      vim.keymap.set('n', '<leader>ts', function() require('neotest').summary.toggle() end, { desc = '[T]est [S]ummary' })
-    end,
-  },
-
-  -- 5. INTERACTIVE EXECUTION (REPL)
-  -- Sends chunks of code from your Neovim buffer to a separate terminal pane.
-  {
-    'jpalardy/vim-slime',
-    init = function()
-      vim.g.slime_target = 'neovim'
-      vim.g.slime_bracketed_paste = 1
-      vim.g.slime_python_ipython = 1
-    end,
-    config = function()
-      vim.keymap.set('n', '<leader>rr', '<Plug>SlimeParagraphSend', { desc = '[R]EPL Send [R]egion' })
-      vim.keymap.set('v', '<leader>rr', '<Plug>SlimeRegionSend', { desc = '[R]EPL Send [R]egion' })
-      vim.keymap.set('n', '<leader>rc', '<cmd>SlimeConfig<cr>', { desc = '[R]EPL [C]onfig' })
-    end,
-  },
-
-  -- =====================================================================
-  -- ================== END PYTHON IDE CONFIGURATION =====================
-  -- =====================================================================
-
-  -- =====================================================================
-  -- ==================== START WEB DEV CONFIGURATION ==========================
-  -- =====================================================================
-
-  -- Automatically close and auto-rename HTML/JSX tags
-  {
-    'windwp/nvim-ts-autotag',
-    event = { 'BufReadPre', 'BufNewFile' },
-    config = function() require('nvim-ts-autotag').setup() end,
-  },
-
-  -- =====================================================================
-  -- ==================== END WEB DEV CONFIGURATION ==========================
-  -- =====================================================================
 
   --  Uncomment the following line and add your plugins to `lua/custom/plugins/*.lua` to get going.
   { import = 'custom.plugins' },
