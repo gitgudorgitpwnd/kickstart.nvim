@@ -123,6 +123,7 @@ local lang_registry = {
       -- The compiler engine below maps these to the actual 'ruff' package for Mason.
       python = { 'ruff_format', 'ruff_organize_imports' },
     },
+    linters = { python = { 'pylint' } }, -- Add this to ensure Mason installs it
   },
   frontend = {
     treesitter = { 'javascript', 'typescript', 'tsx', 'html', 'css', 'scss' },
@@ -155,6 +156,7 @@ local lang_registry = {
       markdown = { 'prettierd', 'prettier', stop_after_first = true },
       toml = { 'taplo' },
     },
+    linters = { markdown = { 'markdownlint' } }, -- Add this to ensure Mason installs it
   },
   infra_shell = {
     treesitter = { 'bash', 'dockerfile', 'hcl', 'terraform', 'sql' },
@@ -180,10 +182,10 @@ local plugin_registry = {
   'kickstart.plugins.neo-tree',
 
   -- Debugging & Tooling
-  'kickstart.plugins.debug',
-  'kickstart.plugins.lint',
+  -- 'kickstart.plugins.debug',
+  -- 'kickstart.plugins.lint',
   'kickstart.plugins.venv-selector',
-  'kickstart.plugins.nvim-lint',
+  -- 'kickstart.plugins.nvim-lint',
   'kickstart.plugins.nvim-dap',
   'kickstart.plugins.neotest',
   'kickstart.plugins.nvim-ts-autotag',
@@ -200,6 +202,7 @@ local compiled = {
   treesitter_parsers = {},
   lsps = {},
   formatters_by_ft = {},
+  linters_by_ft = {},
   mason_tools = {},
 }
 
@@ -239,6 +242,20 @@ for _, config in pairs(lang_registry) do
       compiled.formatters_by_ft[ft] = formatters
       for _, fmt in ipairs(formatters) do
         register_mason_tool(fmt)
+      end
+    end
+  end
+
+  if config.linters then
+    for ft, linter_list in pairs(config.linters) do
+      -- 1. Normalize: If it's a string, wrap it in a table so ipairs and list_extend work.
+      local normalized_list = type(linter_list) == 'table' and linter_list or { linter_list }
+      -- 2. Aggregate linters for nvim-lint
+      compiled.linters_by_ft[ft] = compiled.linters_by_ft[ft] or {}
+      vim.list_extend(compiled.linters_by_ft[ft], normalized_list)
+      -- 3. Register for Mason installation
+      for _, linter in ipairs(normalized_list) do
+        register_mason_tool(linter)
       end
     end
   end
@@ -406,6 +423,27 @@ local plugins = {
       fuzzy = { implementation = 'prefer_rust_with_warning' },
       signature = { enabled = true },
     },
+  },
+
+  --- Linting (nvim-lint)
+  {
+    'mfussenegger/nvim-lint',
+    event = { 'BufReadPre', 'BufNewFile' },
+    config = function()
+      local lint = require 'lint'
+
+      -- Mapping the metadata directly to the plugin
+      lint.linters_by_ft = compiled.linters_by_ft
+
+      -- Create the automation to trigger linting
+      local lint_augroup = vim.api.nvim_create_augroup('lint-logic', { clear = true })
+      vim.api.nvim_create_autocmd({ 'BufEnter', 'BufWritePost', 'InsertLeave' }, {
+        group = lint_augroup,
+        callback = function()
+          if vim.bo.modifiable then lint.try_lint() end
+        end,
+      })
+    end,
   },
 
   --- LSP Configuration

@@ -121,8 +121,8 @@ return {
     end,
     -- Custom keymaps for Slime
     config = function()
-      vim.keymap.set('x', '<leader>s', '<Plug>SlimeRegionSend', { desc = '[S]lime Send Region' })
-      vim.keymap.set('n', '<leader>s', '<Plug>SlimeParagraphSend', { desc = '[S]lime Send Paragraph' })
+      vim.keymap.set('x', '<leader>rs', '<Plug>SlimeRegionSend', { desc = '[S]lime Send Region' })
+      vim.keymap.set('n', '<leader>rs', '<Plug>SlimeParagraphSend', { desc = '[S]lime Send Paragraph' })
     end,
   },
 }

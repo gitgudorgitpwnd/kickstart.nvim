@@ -15,7 +15,26 @@ return {
       require('dap-python').setup 'python'
 
       dapui.setup()
-
+      --[[
+      -- NEW: Podman Remote Debugging Configuration
+      dap.configurations.python = {
+        {
+          type = 'python',
+          request = 'attach',
+          name = 'Podman: Remote Attach',
+          connect = {
+            port = 5678,
+            host = '127.0.0.1',
+          },
+          pathMappings = {
+            {
+              localRoot = vim.fn.getcwd(), -- Your project folder on Fedora
+              remoteRoot = '/app', -- Where the code sits in the container
+            },
+          },
+        },
+      }
+      ]]
       -- Automatically open/close the UI when a debug session starts/ends
       dap.listeners.before.attach.dapui_config = function() dapui.open() end
       dap.listeners.before.launch.dapui_config = function() dapui.open() end
