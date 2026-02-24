@@ -277,6 +277,8 @@ vim.o.cursorline = true -- Highlight the line under cursor
 vim.o.scrolloff = 10 -- Maintain context lines
 vim.o.list = true -- Display hidden whitespace characters
 vim.opt.listchars = { tab = '» ', trail = '·', nbsp = '␣' }
+vim.opt.number = true -- Enable line number.
+vim.opt.relativenumber = true -- Enable relative line number.
 
 --- Editing Behavior & Reliability
 vim.o.mouse = 'a' -- Enable mouse support in all modes
@@ -311,6 +313,7 @@ vim.keymap.set('i', ';;', '<C-[>', { desc = 'Escape into normal mode.' })
 vim.keymap.set('n', ';;', '%', { desc = 'Jump to matching bracket/brace.' })
 vim.keymap.set('n', '09', '$', { noremap = true, desc = '09 is $ - end of line' })
 vim.keymap.set('n', '00', '^', { noremap = true, desc = '00 is ^ - first char of line' })
+vim.keymap.set('n', '000', 'G', { noremap = true, desc = '000 is G - Last line of file' })
 vim.keymap.set('n', 'U', '<C-r>', { noremap = true, desc = 'Redo last undone change' })
 vim.keymap.set('n', '0', '0', { noremap = true, desc = '0 is 0 - start of line' })
 
