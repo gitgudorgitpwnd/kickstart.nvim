@@ -280,6 +280,8 @@ vim.diagnostic.config {
   -- Diagnostic format configs must be explicitly nested within their display views
   virtual_text = {
     format = diagnostic_formatter,
+    spacing = 4,
+    prefix = '●',
   },
   float = {
     format = diagnostic_formatter,
@@ -1690,6 +1692,8 @@ local plugins = {
   --- Treesitter: Advanced Syntax Highlighting and Parsing
   {
     'nvim-treesitter/nvim-treesitter',
+    -- Hard-locking version is the safest approach to prevent API breakages
+    -- regarding the `.configs` module resolution.
     version = 'v0.9.3',
     build = ':TSUpdate',
     event = { 'BufReadPost', 'BufNewFile' },
@@ -1792,7 +1796,7 @@ local plugins = {
   },
 
   --=============================================================================
-  -- 6A. LSP ORCHESTRATION & CONFIGURATION
+  -- 6. LSP ORCHESTRATION & CONFIGURATION
   --=============================================================================
   -- This section leverages the native Neovim Language Server Protocol orchestrator.
   -- Key architecture:
@@ -1815,7 +1819,7 @@ local plugins = {
     end)(),
     config = function()
       -- ========================================================================
-      -- LSP ATTACH LOGIC (Feature capability detection & Keymaps)
+      -- LSP ATTACH LOGIC (Feature capability detection)
       -- ========================================================================
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('monolith-lsp-attach', { clear = true }),
@@ -1823,17 +1827,14 @@ local plugins = {
           local client = vim.lsp.get_client_by_id(event.data.client_id)
           if not client then return end
 
-          local map = function(keys, func, desc, mode) vim.keymap.set(mode or 'n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc }) end
+          local map = function(keys, func, desc) vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc }) end
 
-          -- Even though the editor provides native mappings for these, we re-apply them
-          -- to ensure Which-Key picks up the descriptions and for explicit control.
-          map('grn', vim.lsp.buf.rename, '[R]e[n]ame Variable')
-          map('gra', vim.lsp.buf.code_action, '[G]oto Code [A]ction', { 'n', 'x' })
+          -- Adding mappings not yet natively defaulted in the editor core
           map('grD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
-          -- Explicit Toggle Inlay Hints keymap detection
+          -- Use native protocol enums for robust capability checks
           if client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
-            map('<leader>th', function() vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf }) end, '[T]oggle Inlay [H]ints')
+            vim.lsp.inlay_hint.enable(true, { bufnr = event.buf })
           end
 
           -- Provide visual feedback for symbols under the cursor
@@ -1872,43 +1873,36 @@ local plugins = {
             -- Merge overrides mapped within our monolith's Language Registry (Section 3)
             local user_settings = compiled.lsps[server_name] or {}
 
-            -- Construct the definitive table accepted by the native config schema.
-            -- Deep extend ensures we don't drop any arbitrary user keys (like init_options).
-            local final_config = vim.tbl_deep_extend('force', {}, user_settings)
-
-            -- Fallback to lspconfig defaults for core routing parameters
-            final_config.cmd = final_config.cmd or default_config.cmd
-            final_config.filetypes = final_config.filetypes or default_config.filetypes
-            final_config.root_dir = final_config.root_dir or default_config.root_dir
-            final_config.capabilities = vim.tbl_deep_extend('force', capabilities, final_config.capabilities or {})
+            -- Construct the definitive table accepted by the native config schema
+            local final_config = {
+              cmd = user_settings.cmd or default_config.cmd,
+              filetypes = user_settings.filetypes or default_config.filetypes,
+              root_markers = user_settings.root_markers or default_config.root_dir,
+              settings = user_settings.settings or {},
+              capabilities = vim.tbl_deep_extend('force', capabilities, user_settings.capabilities or {}),
+            }
 
             -- SchemaStore injection: Extends JSON/YAML servers with community schema catalogs
             if (server_name == 'jsonls' or server_name == 'yamlls') and is_enabled 'schemastore' then
               local ok, schemastore = pcall(require, 'schemastore')
               if ok then
-                final_config.settings = vim.tbl_deep_extend('force', final_config.settings or {}, {
+                final_config.settings = vim.tbl_deep_extend('force', final_config.settings, {
                   json = server_name == 'jsonls' and { schemas = schemastore.json.schemas(), validate = true } or nil,
                   yaml = server_name == 'yamlls' and { schemas = schemastore.yaml.schemas(), validate = true } or nil,
                 })
               end
             end
 
-            -- Lua Server Environment Protection (Preserving original logic for local .luarc.json overrides)
+            -- Lua Server Environment Protection: Prevents undefined global warnings for 'vim'
             if server_name == 'lua_ls' then
-              final_config.on_init = function(client)
-                if client.workspace_folders then
-                  local path = client.workspace_folders[1].name
-                  if path ~= vim.fn.stdpath 'config' and (vim.uv.fs_stat(path .. '/.luarc.json') or vim.uv.fs_stat(path .. '/.luarc.jsonc')) then return end
-                end
-                client.config.settings.Lua = vim.tbl_deep_extend('force', client.config.settings.Lua or {}, {
-                  runtime = { version = 'LuaJIT' },
-                  diagnostics = { globals = { 'vim' } },
-                  workspace = {
-                    checkThirdParty = false,
-                    library = { vim.env.VIMRUNTIME, '${3rd}/luv/library' },
-                  },
-                })
-              end
+              final_config.settings.Lua = vim.tbl_deep_extend('force', final_config.settings.Lua or {}, {
+                runtime = { version = 'LuaJIT' },
+                diagnostics = { globals = { 'vim' } },
+                workspace = {
+                  checkThirdParty = false,
+                  library = { vim.env.VIMRUNTIME, '${3rd}/luv/library' }
+                }
+              })
             end
 
             -- Set the global template for the server within the native config store
@@ -1980,9 +1974,6 @@ vim.opt.rtp:prepend(lazypath)
 
 -- 4. Launch Lazy.nvim with the assembled plugin list.
 require('lazy').setup(plugins, {
-  --  rocks = {
-  --    hererocks = true, -- This creates a local Lua 5.1 environment for rocks
-  --  },
   ui = {
     icons = vim.g.have_nerd_font and {} or {
       cmd = '⌘',
@@ -2003,4 +1994,3 @@ require('lazy').setup(plugins, {
 })
 
 -- vim: ts=2 sts=2 sw=2 et
-

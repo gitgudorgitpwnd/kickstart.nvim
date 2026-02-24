@@ -1980,9 +1980,6 @@ vim.opt.rtp:prepend(lazypath)
 
 -- 4. Launch Lazy.nvim with the assembled plugin list.
 require('lazy').setup(plugins, {
-  --  rocks = {
-  --    hererocks = true, -- This creates a local Lua 5.1 environment for rocks
-  --  },
   ui = {
     icons = vim.g.have_nerd_font and {} or {
       cmd = '⌘',

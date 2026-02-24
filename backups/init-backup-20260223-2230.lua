@@ -1,3 +1,5 @@
+--- START OF FILE init.lua ---
+
 --=============================================================================
 -- init-monolith.lua
 -- Metadata-Driven, Comment-Heavy, Beginner-Friendly Neovim Configuration
@@ -189,9 +191,15 @@ local ENABLED_PLUGINS = vim.deepcopy(FEATURES.plugins)
 -- Small helper to make conditionals read naturally.
 local function is_enabled(feature_name) return ENABLED_PLUGINS[feature_name] == true end
 
+-- netrw tweaks (kept as comments for future fallback/testing)
+-- vim.cmd 'let g:netrw_winsize = 25' -- width %
+-- vim.cmd 'let g:netrw_banner = 0' -- hide banner
+-- vim.keymap.set('n', ':Vex', ':Vex | wincmd H<CR>')
+
 --=============================================================================
 -- 2. GLOBAL VARIABLES & CORE OPTIONS
 --=============================================================================
+-- Sourced from: init.lua (Section 1)
 
 -- ============================================================================
 -- FILETYPE REGISTRATION
@@ -258,35 +266,21 @@ vim.keymap.set('n', '<C-l>', '<C-w><C-l>', { desc = 'Move focus to the right win
 vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
 vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
--- Remaps
+--Remaps
 vim.keymap.set('i', ';;', '<C-[>', { desc = 'Escape into normal mode.' })
-vim.keymap.set('n', ';;', '%', { desc = 'Jump to matching bracket/brace.' })
+vim.keymap.set('n', ';;', '%', { desc = 'Escape into normal mode.' })
 vim.keymap.set('n', '09', '$', { noremap = true, desc = '09 is $ - end of line' })
 vim.keymap.set('n', '00', '^', { noremap = true, desc = '00 is ^ - first char of line' })
 vim.keymap.set('n', 'U', '<C-r>', { noremap = true, desc = 'Redo last undone change' })
 vim.keymap.set('n', '0', '0', { noremap = true, desc = '0 is 0 - start of line' })
 
 --- Diagnostic Config
--- A robust formatter function is used to prevent indexing errors when the
--- native diagnostic API passes varied structures.
-local diagnostic_formatter = function(diag)
-  if type(diag) ~= 'table' then return diag end
-  return string.format('%s (%s: %s)', diag.message, diag.source or 'LSP', diag.code or 'no-code')
-end
-
 vim.diagnostic.config {
   update_in_insert = false,
   severity_sort = true,
-  -- Diagnostic format configs must be explicitly nested within their display views
-  virtual_text = {
-    format = diagnostic_formatter,
-  },
-  float = {
-    format = diagnostic_formatter,
-    border = 'rounded',
-    source = 'if_many',
-  },
+  float = { border = 'rounded', source = 'if_many' },
   underline = { severity = vim.diagnostic.severity.ERROR },
+  virtual_text = true,
   virtual_lines = false,
   jump = { float = true },
 }
@@ -302,6 +296,7 @@ vim.api.nvim_create_autocmd('TextYankPost', {
 --=============================================================================
 -- 3. LANGUAGE METADATA REGISTRY
 --=============================================================================
+-- Sourced from: init.lua (Section 2)
 -- Defines LSPs, Treesitter parsers, Formatters, and Linters.
 --=============================================================================
 local lang_registry = {
@@ -413,6 +408,7 @@ local LANGUAGE_ORDER = { 'lua', 'python', 'frontend', 'data_markup', 'infra_shel
 --=============================================================================
 -- 4. METADATA COMPILER ENGINE
 --=============================================================================
+-- Sourced from: init.lua (Section 4)
 -- Parses registries into deterministic configurations.
 --=============================================================================
 
@@ -1460,6 +1456,7 @@ local function register_writing_commands()
       { cmd = 'node', label = 'Node.js (markdown-preview.nvim)' },
       { cmd = 'vale', label = 'Vale (prose linting)' },
       { cmd = 'markdownlint', label = 'markdownlint (Markdown linting)' },
+      -- { cmd = "xelatex",       label = "XeLaTeX (Pandoc PDF engine, optional)" },
     }
 
     local lines = { 'Writing / document tooling dependency check:', '------------------------------------------' }
@@ -1590,6 +1587,7 @@ register_writing_keymaps()
 --=============================================================================
 -- 6. CORE PLUGINS (Always Loaded)
 --=============================================================================
+-- These plugins come from original `init.lua` and are always loaded.
 -- Think of this as the stable platform layer (editor UX, LSP, completion, etc.)
 -- while OPTIONAL_PLUGINS above acts like feature modules.
 --=============================================================================
@@ -1603,6 +1601,7 @@ local plugins = {
     event = 'VimEnter',
     opts = function()
       -- Build which-key groups dynamically so the UI matches the feature flags.
+      -- Example: if gitsigns is disabled, we do not advertise <leader>h groups.
       local spec = {
         { '<leader>s', group = '[S]earch', mode = { 'n', 'v' } },
         { '<leader>t', group = '[T]oggle' },
@@ -1671,7 +1670,7 @@ local plugins = {
         { desc = '[S]earch [/] in Open Files' }
       )
 
-      -- Contextual LSP Keymaps scoped to Telescope
+      -- Contextual LSP Keymaps
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('telescope-lsp-attach', { clear = true }),
         callback = function(event)
@@ -1687,25 +1686,61 @@ local plugins = {
     end,
   },
 
+  --- Treesitter
+
+  --  {
+  --    'nvim-treesitter/nvim-treesitter',
+  --    config = function()
+  --      -- compiled.treesitter_parsers is already sanitized (norg removed) in Section 4.
+  --      require('nvim-treesitter.configs').setup {
+  --        ensure_installed = compiled.treesitter_parsers,
+  --        auto_install = true,
+  --        highlight = {
+  --          enable = true,
+  --          -- disable = { "norg" } -- If Neorg requires native highlighting
+  --        },
+  --        indent = { enable = true },
+  --      }
+  --      --      require('nvim-treesitter').install(compiled.treesitter_parsers)
+  --      --      vim.api.nvim_create_autocmd('FileType', {
+  --      --        pattern = compiled.treesitter_parsers,
+  --      --        callback = function() vim.treesitter.start() end,
+  --      --      })
+  --    end,
+  --  },
+
   --- Treesitter: Advanced Syntax Highlighting and Parsing
   {
     'nvim-treesitter/nvim-treesitter',
+    -- Use a specific version to avoid the breaking "module not found"
+    -- errors occurring on the nvim-treesitter master branch.
     version = 'v0.9.3',
     build = ':TSUpdate',
     event = { 'BufReadPost', 'BufNewFile' },
+    -- Lazy-load the module only when needed
     cmd = { 'TSUpdateSync', 'TSUpdate', 'TSInstall' },
     config = function()
-      -- compiled.treesitter_parsers is built in Section 4 of the monolith
+      -- compiled.treesitter_parsers is built in Section 4 of your monolith
       local configs = require 'nvim-treesitter.configs'
 
       configs.setup {
+        -- Use the parsers we gathered from the lang_registry
         ensure_installed = compiled.treesitter_parsers,
+
+        -- Automatically install parsers when entering a buffer
         auto_install = true,
+
         highlight = {
           enable = true,
+          -- Required: some parsers (like norg) don't play well with
+          -- disable = { "norg" } -- Uncomment if Neorg has highlighting conflicts later
+          -- standard treesitter highlighting logic.
           additional_vim_regex_highlighting = false,
         },
+
         indent = { enable = true },
+
+        -- Incremental selection (standard Kickstart feature)
         incremental_selection = {
           enable = true,
           keymaps = {
@@ -1778,6 +1813,8 @@ local plugins = {
       local lint = require 'lint'
 
       -- Mapping the metadata directly to the plugin.
+      -- This includes prose linting (Vale) for markdown/text/gitcommit as defined
+      -- in `lang_registry.data_markup.linters`.
       lint.linters_by_ft = compiled.linters_by_ft
 
       -- Create the automation to trigger linting
@@ -1792,16 +1829,19 @@ local plugins = {
   },
 
   --=============================================================================
-  -- 6A. LSP ORCHESTRATION & CONFIGURATION
+  -- 6. LSP CONFIGURATION (NEOVIM 0.11+ NATIVE EDITION)
   --=============================================================================
-  -- This section leverages the native Neovim Language Server Protocol orchestrator.
-  -- Key architecture:
-  -- 1. `vim.lsp.enable()`: Manages server lifecycles gracefully via internal autocommands.
-  -- 2. `vim.lsp.config`: A centralized native table handling global server rules.
-  -- 3. The editor natively provides core mappings (`grn`, `gra`, `grr`, `gri`).
+  -- This section leverages the brand new Neovim 0.11+ LSP orchestration APIs.
+  --
+  -- KEY CHANGES IN 0.11:
+  -- 1. `vim.lsp.enable()`: The new native way to start/stop servers.
+  -- 2. `vim.lsp.config`: A centralized native table for server settings.
+  -- 3. Native Keymaps: `grn` (rename), `gra` (code action), `grr` (references),
+  --    and `gri` (implementation) are now BUILT-IN defaults.
+  -- 4. Native Completion: Improved integration with external engines like Blink.
   --=============================================================================
   {
-    'neovim/nvim-lspconfig', -- Used strictly as a metadata source for default LSP configurations
+    'neovim/nvim-lspconfig', -- Still used as a metadata library for server definitions
     dependencies = (function()
       local deps = {
         { 'williamboman/mason.nvim', config = true },
@@ -1815,7 +1855,16 @@ local plugins = {
     end)(),
     config = function()
       -- ========================================================================
-      -- LSP ATTACH LOGIC (Feature capability detection & Keymaps)
+      -- 1. GLOBAL DIAGNOSTIC CONFIG (0.11 API)
+      -- ========================================================================
+      vim.diagnostic.config {
+        severity_sort = true,
+        jump = { float = true }, -- 0.11 native jumping behavior
+        format = function(diag) return string.format('%s (%s: %s)', diag.message, diag.source, diag.code or 'no-code') end,
+      }
+
+      -- ========================================================================
+      -- 2. LSP ATTACH (The "On Connect" logic)
       -- ========================================================================
       vim.api.nvim_create_autocmd('LspAttach', {
         group = vim.api.nvim_create_augroup('monolith-lsp-attach', { clear = true }),
@@ -1823,20 +1872,22 @@ local plugins = {
           local client = vim.lsp.get_client_by_id(event.data.client_id)
           if not client then return end
 
-          local map = function(keys, func, desc, mode) vim.keymap.set(mode or 'n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc }) end
+          -- NOTE: Neovim 0.11 provides native mappings for:
+          -- grn -> Rename
+          -- gra -> Code Action
+          -- grr -> References
+          -- gri -> Implementation
+          -- gO  -> Symbols (in 0.11)
 
-          -- Even though the editor provides native mappings for these, we re-apply them
-          -- to ensure Which-Key picks up the descriptions and for explicit control.
-          map('grn', vim.lsp.buf.rename, '[R]e[n]ame Variable')
-          map('gra', vim.lsp.buf.code_action, '[G]oto Code [A]ction', { 'n', 'x' })
+          -- We only add custom mappings that aren't native yet:
+          local map = function(keys, func, desc) vim.keymap.set('n', keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc }) end
+
           map('grD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
 
-          -- Explicit Toggle Inlay Hints keymap detection
-          if client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then
-            map('<leader>th', function() vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled { bufnr = event.buf }) end, '[T]oggle Inlay [H]ints')
-          end
+          -- Enable Inlay Hints if the server supports it (0.11 Native Check)
+          if client:supports_method(vim.lsp.protocol.Methods.textDocument_inlayHint) then vim.lsp.inlay_hint.enable(true, { bufnr = event.buf }) end
 
-          -- Provide visual feedback for symbols under the cursor
+          -- Setup Document Highlighting (symbols under cursor)
           if client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight) then
             local group = vim.api.nvim_create_augroup('lsp-highlight', { clear = false })
             vim.api.nvim_create_autocmd({ 'CursorHold', 'CursorHoldI' }, {
@@ -1854,67 +1905,51 @@ local plugins = {
       })
 
       -- ========================================================================
-      -- LSP ENGINE REGISTRATION & ACTIVATION
+      -- 3. THE 0.11 NATIVE ORCHESTRATOR
       -- ========================================================================
       local capabilities = require('blink.cmp').get_lsp_capabilities()
 
+      -- Setup Mason so we can install tools
       require('mason').setup()
       require('mason-tool-installer').setup { ensure_installed = compiled.mason_tools }
 
+      -- We use mason-lspconfig to bridge Mason with Neovim's native lsp.config
       require('mason-lspconfig').setup {
         ensure_installed = vim.tbl_keys(compiled.lsps),
         handlers = {
           function(server_name)
-            -- Retrieve the default baseline configurations built into nvim-lspconfig
+            -- 1. Get the base config from nvim-lspconfig
             local server_def = require('lspconfig')[server_name]
-            local default_config = server_def and server_def.document_config and server_def.document_config.default_config or {}
 
-            -- Merge overrides mapped within our monolith's Language Registry (Section 3)
+            -- 2. Pull your custom settings from the lang_registry (Section 3)
             local user_settings = compiled.lsps[server_name] or {}
 
-            -- Construct the definitive table accepted by the native config schema.
-            -- Deep extend ensures we don't drop any arbitrary user keys (like init_options).
-            local final_config = vim.tbl_deep_extend('force', {}, user_settings)
+            -- 3. Construct the 0.11 Native Config table
+            local final_config = {
+              cmd = user_settings.cmd or server_def.document_config.default_config.cmd,
+              filetypes = user_settings.filetypes or server_def.document_config.default_config.filetypes,
+              root_markers = user_settings.root_markers or server_def.document_config.default_config.root_dir,
+              settings = user_settings.settings or {},
+              capabilities = vim.tbl_deep_extend('force', capabilities, user_settings.capabilities or {}),
+            }
 
-            -- Fallback to lspconfig defaults for core routing parameters
-            final_config.cmd = final_config.cmd or default_config.cmd
-            final_config.filetypes = final_config.filetypes or default_config.filetypes
-            final_config.root_dir = final_config.root_dir or default_config.root_dir
-            final_config.capabilities = vim.tbl_deep_extend('force', capabilities, final_config.capabilities or {})
-
-            -- SchemaStore injection: Extends JSON/YAML servers with community schema catalogs
+            -- 4. Inject SchemaStore via pcall for safety
             if (server_name == 'jsonls' or server_name == 'yamlls') and is_enabled 'schemastore' then
               local ok, schemastore = pcall(require, 'schemastore')
               if ok then
-                final_config.settings = vim.tbl_deep_extend('force', final_config.settings or {}, {
+                final_config.settings = vim.tbl_deep_extend('force', final_config.settings, {
                   json = server_name == 'jsonls' and { schemas = schemastore.json.schemas(), validate = true } or nil,
                   yaml = server_name == 'yamlls' and { schemas = schemastore.yaml.schemas(), validate = true } or nil,
                 })
               end
             end
 
-            -- Lua Server Environment Protection (Preserving original logic for local .luarc.json overrides)
-            if server_name == 'lua_ls' then
-              final_config.on_init = function(client)
-                if client.workspace_folders then
-                  local path = client.workspace_folders[1].name
-                  if path ~= vim.fn.stdpath 'config' and (vim.uv.fs_stat(path .. '/.luarc.json') or vim.uv.fs_stat(path .. '/.luarc.jsonc')) then return end
-                end
-                client.config.settings.Lua = vim.tbl_deep_extend('force', client.config.settings.Lua or {}, {
-                  runtime = { version = 'LuaJIT' },
-                  diagnostics = { globals = { 'vim' } },
-                  workspace = {
-                    checkThirdParty = false,
-                    library = { vim.env.VIMRUNTIME, '${3rd}/luv/library' },
-                  },
-                })
-              end
-            end
-
-            -- Set the global template for the server within the native config store
+            -- 5. APPLY NATIVELY (Neovim 0.11 API)
+            -- This sets the configuration for the server name globally.
             vim.lsp.config[server_name] = final_config
 
-            -- Instruct the native orchestrator to watch for matching buffers and instantiate the server
+            -- 6. ENABLE NATIVELY (Neovim 0.11 API)
+            -- This starts the server or prepares it to start when a matching file opens.
             vim.lsp.enable(server_name)
           end,
         },
@@ -1925,6 +1960,8 @@ local plugins = {
   --=============================================================================
   -- 7. UI, AESTHETICS & THEME
   --=============================================================================
+
+  --- UI, Aesthetics
   {
     'folke/tokyonight.nvim',
     priority = 1000,
@@ -1948,7 +1985,7 @@ local plugins = {
 }
 
 --=============================================================================
--- 8. PLUGIN ASSEMBLY & BOOTSTRAP
+-- 7. PLUGIN ASSEMBLY & BOOTSTRAP
 --=============================================================================
 -- STEP 1: Append optional plugins in a deterministic order.
 -- We iterate the explicit OPTIONAL_PLUGIN_ORDER list instead of `pairs()` so
@@ -1958,6 +1995,8 @@ for _, plugin_name in ipairs(OPTIONAL_PLUGIN_ORDER) do
 end
 
 -- STEP 2: Optional compatibility hook for future modular extensions.
+-- This restores the spirit of original `table.insert(plugins, { import = 'custom.plugins' })`
+-- while remaining safe for the monolith migration (disabled by default).
 if FEATURES.imports and FEATURES.imports.custom_plugins then
   local custom_plugin_dir = vim.fn.stdpath 'config' .. '/lua/custom/plugins'
   if vim.fn.isdirectory(custom_plugin_dir) == 1 then
@@ -1979,6 +2018,8 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 -- 4. Launch Lazy.nvim with the assembled plugin list.
+--    At this point, all feature toggles and metadata compilation have already
+--    happened, so Lazy receives a final, concrete plugin specification.
 require('lazy').setup(plugins, {
   --  rocks = {
   --    hererocks = true, -- This creates a local Lua 5.1 environment for rocks
@@ -2003,4 +2044,3 @@ require('lazy').setup(plugins, {
 })
 
 -- vim: ts=2 sts=2 sw=2 et
-
