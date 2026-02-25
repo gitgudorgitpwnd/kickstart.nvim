@@ -236,6 +236,7 @@ sudo ln -sf /opt/nvim-linux-x86_64/bin/nvim /usr/local/bin/
 
 ```
 sudo dnf install -y gcc make git ripgrep fd-find unzip neovim
+sudo dnf install gcc make git ripgrep fd-find unzip neovim curl wget tar wl-clipboard nodejs python3-pip python3 cargo rust golang lua lua-devel luarocks
 ```
 </details>
 
